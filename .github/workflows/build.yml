@@ -1,0 +1,49 @@
+name: Build Android AAB
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          channel: 'stable'
+      
+      - name: Setup Gradle wrapper
+        run: |
+          cd android
+          # Download gradle-wrapper.jar (version 8.3 to match gradle-wrapper.properties)
+          mkdir -p gradle/wrapper
+          curl -L -o gradle-wrapper-temp.zip https://services.gradle.org/distributions/gradle-8.3-bin.zip
+          unzip -j gradle-wrapper-temp.zip gradle-8.3/lib/gradle-wrapper.jar -d gradle/wrapper
+          rm gradle-wrapper-temp.zip
+          chmod +x gradlew gradlew.bat
+      
+      - name: Get dependencies
+        run: flutter pub get
+      
+      - name: Build AAB
+        run: flutter build appbundle --debug
+      
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-aab
+          path: build/app/outputs/bundle/debug/app-debug.aab
+          retention-days: 7
